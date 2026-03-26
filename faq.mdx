@@ -1,0 +1,157 @@
+---
+title: "FAQ"
+description: Frequently asked questions about the wedding invitation & RSVP site
+---
+
+<AccordionGroup>
+
+  <Accordion title="Is this free to use?">
+    Yes. The stack is entirely free for personal use:
+
+    - **GitHub Pages** — free static site hosting with no bandwidth limits for public repositories.
+    - **Google Apps Script** — free for personal use. It runs under your Google account's free-tier quotas.
+    - **Gmail** — Apps Script uses `GmailApp` to send emails, which is free up to Gmail's daily sending limits (see the RSVP capacity question below).
+
+    No payment or credit card is required.
+  </Accordion>
+
+  <Accordion title="Can guests RSVP multiple times?">
+    Yes. Each form submission creates a new row in the `RSVP_responses` sheet — there is no duplicate detection or deduplication built into the form or the Apps Script.
+
+    To manage duplicates, filter or sort the sheet by the `name` column in Google Sheets. You can use **Data → Create a filter** and then sort column B (name) alphabetically to group submissions from the same guest.
+  </Accordion>
+
+  <Accordion title="How many RSVPs can I collect?">
+    In practice, you are unlikely to hit storage limits for a wedding-sized guest list:
+
+    - **Google Sheets** can hold up to 5 million cells per spreadsheet. With 13 columns per row, that is roughly 384,000 RSVP rows before hitting the limit.
+    - **Gmail sending quota** is the more relevant constraint: free Gmail accounts can send up to **100 emails per day** via Apps Script. Each RSVP triggers up to two emails (one admin notification and one guest confirmation if an email was provided). Plan accordingly if your guest list is large and you expect many RSVPs on a single day.
+  </Accordion>
+
+  <Accordion title="Can I add more guests per RSVP?">
+    The guests dropdown in the RSVP form (`index.html`) supports values from 0 to 7, plus a special option for 8 or more:
+
+    ```html index.html
+    <option value="0">隔空祝福(+0)</option>
+    <option value="1">單獨赴約(+1)</option>
+    <!-- ... -->
+    <option value="7">人山人海(+7)</option>
+    <option value="99">乾爹包桌(8+ up)</option>
+    ```
+
+    The value `99` represents the "乾爹包桌" (table sponsor) option for groups of 8 or more. You can add additional `<option>` elements to the `#guests-input` select in `index.html` if you need finer-grained options beyond 7.
+  </Accordion>
+
+  <Accordion title="How do I change the language?">
+    The site is bilingual by design. English labels appear in navigation and form placeholders; Traditional Chinese (繁體中文) text appears in the invitation content, form labels, and email templates.
+
+    Chinese text is written directly in `index.html` as plain text. To replace or translate any string:
+
+    1. Open `index.html` in a text editor.
+    2. Search for the Chinese string you want to change (for example, `貴姓大名`, `我願意`, or `忍痛拒絕`).
+    3. Replace it with your preferred text.
+
+    Email body text is defined in `createEmailBody()` inside `google-apps-script.js`. Update the strings there to change the language of guest confirmation and admin notification emails.
+  </Accordion>
+
+  <Accordion title="Can I use a custom domain?">
+    Yes. Two options are supported out of the box:
+
+    **GitHub Pages**
+    1. Add a file named `CNAME` to the root of your repository containing your domain, for example `www.yourwedding.com`.
+    2. Update your domain's DNS records with your registrar to point to GitHub Pages.
+    3. Enable the custom domain in **Repository settings → Pages**.
+
+    **Netlify**
+    1. Connect your GitHub repository to a new Netlify site.
+    2. Go to **Site settings → Domain management** and add your custom domain.
+    3. Netlify will provision an SSL certificate automatically.
+
+    Both options provide free HTTPS.
+  </Accordion>
+
+  <Accordion title="Is the Apps Script URL public?">
+    Yes, the deployed web app URL is public and accessible to anyone who has it. However, the endpoint only does useful work when it receives a POST request in the exact format the form sends.
+
+    The README notes:
+
+    > The Google Apps Script URL is public but only accepts the specific form data. Consider adding a simple invite code system if you want additional security.
+
+    To add basic protection, you can add a hidden `invite_code` field to the form and validate its value at the top of `handleRequest()` in `google-apps-script.js` before processing the submission.
+  </Accordion>
+
+  <Accordion title="What browsers are supported?">
+    The site is tested on the latest versions of all major browsers:
+
+    - Chrome
+    - Firefox
+    - Safari
+    - Edge
+    - Mobile browsers on iOS (Safari) and Android (Chrome)
+
+    The site uses jQuery 3.6.0, Bootstrap 5.3.0, and standard Web APIs (`IntersectionObserver`, `touchstart`/`touchend`). For browsers that do not support `IntersectionObserver` or where the user has **prefers-reduced-motion** enabled, scroll animations are skipped and content is shown immediately.
+  </Accordion>
+
+  <Accordion title="How do I view all RSVPs?">
+    Open your Google Sheet directly. All RSVP responses are stored in the `RSVP_responses` tab with the following columns:
+
+    | Column | Field |
+    |--------|-------|
+    | A | Timestamp (UTC+8) |
+    | B | name |
+    | C | relation |
+    | D | attendance |
+    | E | guests |
+    | F | dietary |
+    | G | vegetarian-meals |
+    | H | children-seats |
+    | I | children-seats-count |
+    | J | invitation |
+    | K | address |
+    | L | message |
+    | M | email |
+
+    You can also call `getRSVPStats()` from the Apps Script editor to log a summary of total, attending, and not-attending counts directly to the Executions log.
+  </Accordion>
+
+  <Accordion title="Can I send reminder emails to guests?">
+    A placeholder function for this exists in `google-apps-script.js`:
+
+    ```javascript google-apps-script.js
+    function sendReminderEmails() {
+      // This is a placeholder for reminder email functionality
+      // You can expand this to send reminder emails to people who haven't RSVPed yet
+      console.log('Reminder email functionality - to be implemented based on your needs');
+    }
+    ```
+
+    The function is not implemented. To build it out, you would read the `email` column from the `RSVP_responses` sheet, filter for guests you want to contact, and call `GmailApp.sendEmail()` for each one. You can trigger it manually from the Apps Script editor or set a **time-based trigger** under **Triggers** in the Apps Script interface.
+  </Accordion>
+
+  <Accordion title="What happens when the wedding date passes?">
+    The countdown timer checks the distance between the current time and the wedding date on every tick. When the date has passed, the interval is cleared and the `.countdown-container` element is replaced with a celebration message:
+
+    ```javascript script.js
+    if (distance < 0) {
+        clearInterval(countdownTimer);
+        $("#days, #hours, #minutes, #seconds").text("00");
+        $(".countdown-container").html('<h3 class="text-center">🎉 We\'re Married! 🎉</h3>');
+    }
+    ```
+
+    The countdown section becomes a static congratulatory message. No other parts of the site change automatically after the wedding date.
+  </Accordion>
+
+  <Accordion title="Do I need to know coding to use this?">
+    Basic HTML editing is sufficient for most customizations. The README explains the key things to change:
+
+    - **Names, date, venue** — edit the text directly in `index.html`.
+    - **Countdown date** — change the date string in `script.js` (`initCountdown()`).
+    - **Apps Script backend URL** — replace the `url:` value in `submitForm()` in `script.js`.
+    - **Sheet ID** — update `SHEET_ID` in `google-apps-script.js`.
+    - **Colors** — search and replace `#8B4513` and `#DEB887` in `style.css`.
+
+    Adding or removing form fields, sending custom reminder emails, or deploying to a custom domain requires a bit more familiarity with HTML, JavaScript, and Google Apps Script respectively, but each is well-documented in the README.
+  </Accordion>
+
+</AccordionGroup>

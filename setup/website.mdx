@@ -1,0 +1,112 @@
+---
+title: "Website Setup"
+description: Connect the website to your Google Apps Script and configure wedding details
+---
+
+Once your Google Apps Script is deployed, update `script.js` and `index.html` to point the form at your backend and reflect your own wedding details.
+
+<Tip>
+  Open your browser's developer console (F12 or Cmd+Option+J) while testing the form. The `submitForm()` function logs `Submitting form data:` before each POST and `Success response:` or `Ajax error:` after. These logs make it easy to confirm submissions are reaching your script.
+</Tip>
+
+## Configuration steps
+
+<Steps>
+  <Step title="Update the Apps Script URL in script.js">
+    Open `script.js` and find the `submitForm()` function. Replace the URL value with the web app URL you copied after deploying your Google Apps Script:
+
+    ```javascript
+    url: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec",
+    ```
+
+    <CodeGroup>
+      ```javascript Before
+      // url: "https://script.google.com/macros/s/AKfycbwe4l8LyuLhIAhAtfN7otEX1KdHf0lsdENNrDeXqrmqz4lf-ufEPHfZSKt_38ZJgZrC/exec",
+      url: "https://script.google.com/macros/s/AKfycbxVIS5bQBwMLlhxSpEtlU8ryMibEoov7HXwOlqK0nSv_H2ys3WCMFZmyiI3ry9nVg0O/exec",
+      ```
+
+      ```javascript After
+      url: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec",
+      ```
+    </CodeGroup>
+
+    The URL format is always:
+
+    ```
+    https://script.google.com/macros/s/<SCRIPT_DEPLOYMENT_ID>/exec
+    ```
+  </Step>
+
+  <Step title="Update the wedding date for the countdown">
+    In `script.js`, find the `initCountdown()` function and update the date and time to match your wedding:
+
+    ```javascript
+    const weddingDate = new Date("Oct 25, 2025 17:30:00").getTime();
+    ```
+
+    The countdown timer calculates days, hours, minutes, and seconds from `new Date()` to this target. When the distance reaches zero, the timer displays `00` across all units and replaces the countdown block with a celebration message.
+
+    Use the format `"Mon DD, YYYY HH:MM:SS"` — this is parsed by the JavaScript `Date` constructor in the visitor's local timezone.
+  </Step>
+
+  <Step title="Update couple names in index.html">
+    Open `index.html` and find the hero section. Update the `<h1>` with the couple's names:
+
+    ```html
+    <h1 class="couple-names">Johnny & Josephine</h1>
+    ```
+
+    This heading is displayed prominently over the cover photo and is the first text guests see when the page loads.
+  </Step>
+
+  <Step title="Update date and venue in the hero section">
+    Directly below the names, update the date-time display and venue information:
+
+    ```html
+    <div class="date-time">2025.10.25 17:30</div>
+    <div class="venue-info">
+        <div class="venue-name">晶宴會館｜桃園館</div>
+        <div class="venue-name">三樓-詠劇場</div>
+    </div>
+    ```
+
+    The `date-time` div is a static display string — it does not need to match the JavaScript `Date` format. Use whatever format suits your locale and style.
+  </Step>
+
+  <Step title="Update the Wedding Details section cards">
+    The `#details` section contains three cards: time, venue address, and parking. Find each `detail-card` and update the content to match your event:
+
+    **Time card** — date, reception time, and dinner time:
+    ```html
+    <h3>時間</h3>
+    <p><strong>2025年10月25日<br>星期六</strong></p>
+    <p>17:30 迎賓酒會<br>18:00 喜宴開席</p>
+    ```
+
+    **Venue card** — venue name, address, and map link:
+    ```html
+    <h3>地點</h3>
+    <p><strong>晶宴會館-桃園館</strong></p>
+    <p>桃園市桃園區<br>南平路166號</p>
+    <a href="https://maps.app.goo.gl/pJSXo1DvpyQhg3LEA" target="_blank"
+        class="btn btn-sm btn-outline-primary mt-2">View Map</a>
+    ```
+
+    **Parking card** — parking details and the thumbnail image:
+    ```html
+    <h3>停車資訊</h3>
+    <p><strong>特約停車場</strong></p>
+    <p>免費停車(三小時)</p>
+    ```
+  </Step>
+
+  <Step title="Update the footer credits">
+    At the bottom of `index.html`, find the `<footer>` element and update the credits text:
+
+    ```html
+    <p>Crafted by Johnny with lots of love for Josephine </p>
+    ```
+
+    Replace the names and message to reflect your own attribution.
+  </Step>
+</Steps>

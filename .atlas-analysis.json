@@ -1,0 +1,62 @@
+{
+  "projectType": "frontend",
+  "projectName": "Wedding Invitation & RSVP",
+  "projectDescription": "A bilingual (English/Traditional Chinese) single-page wedding invitation website for Johnny & Josephine with an integrated RSVP form that collects guest responses and stores them in Google Sheets via Google Apps Script.",
+  "theme": "willow",
+  "primaryColor": "#8B4513",
+  "lightColor": "#DEB887",
+  "darkColor": "#5C2E00",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Setup",
+            "pages": ["setup/google-sheets", "setup/website", "setup/deployment"]
+          },
+          {
+            "group": "Customization",
+            "pages": ["customization/wedding-details", "customization/styling", "customization/rsvp-form"]
+          },
+          {
+            "group": "Backend",
+            "pages": ["backend/google-apps-script", "backend/email-notifications", "backend/data-storage"]
+          },
+          {
+            "group": "Help",
+            "pages": ["troubleshooting", "faq"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Bilingual wedding invitation (English + Traditional Chinese)",
+    "Integrated RSVP form with real-time validation",
+    "Google Sheets backend via Google Apps Script",
+    "Automatic email notifications for guests and couple",
+    "Live countdown timer to wedding date",
+    "Responsive design with mobile-first approach",
+    "Photo gallery with lightbox and swipe-to-close on mobile",
+    "Dynamic form fields (vegetarian meals, children seats, paper invitation with address)",
+    "Confetti animation on successful RSVP submission",
+    "Parking information modal with detailed map"
+  ],
+  "publicApiSurface": [
+    "doGet(e) — Google Apps Script web app GET handler",
+    "doPost(request) — Google Apps Script web app POST handler that processes RSVP submissions",
+    "handleRequest(request) — Core RSVP data handler; writes row to Google Sheet and sends emails",
+    "sendEmail(data) — Sends HTML confirmation email to guest and notification to couple",
+    "initializeSheet() — Sets up Google Sheet with headers, validation, and formatting",
+    "getRSVPStats() — Returns attendance totals and guest count from the sheet",
+    "validateForm() — Client-side form validation (JavaScript)",
+    "scrollToSection(selector) — Smooth-scroll helper exposed globally",
+    "openParkingModal() / closeParkingModal() — Controls the parking info lightbox",
+    "triggerConfetti() — Celebrates successful RSVP with a confetti animation"
+  ]
+}

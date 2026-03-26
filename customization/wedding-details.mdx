@@ -1,0 +1,238 @@
+---
+title: "Wedding Details"
+description: Customize the names, date, venue, and content for your wedding invitation site.
+---
+
+This guide walks through every section of `index.html` that contains wedding-specific content. Change these values to make the site your own.
+
+<Tip>
+  Keep both English and Chinese text where it already appears. Bilingual guests will appreciate seeing familiar characters alongside the English — and it preserves the site's original aesthetic.
+</Tip>
+
+<AccordionGroup>
+
+  <Accordion title="Hero section — names, date & venue">
+
+    The hero is the first thing guests see. It contains the couple's names, the date, and the venue.
+
+    **Couple names**
+
+    ```html index.html
+    <h1 class="couple-names">Johnny & Josephine</h1>
+    ```
+
+    Replace `Johnny & Josephine` with the two names you want displayed. The `Great Vibes` cursive font is applied automatically via `.couple-names` in `style.css`.
+
+    **Date and time**
+
+    ```html index.html
+    <div class="date-time">2025.10.25 17:30</div>
+    ```
+
+    Update the date string to your own wedding date. The format `YYYY.MM.DD HH:MM` matches the existing typography.
+
+    **Venue name and floor**
+
+    ```html index.html
+    <div class="venue-info">
+        <div class="venue-name">晶宴會館｜桃園館</div>
+        <div class="venue-name">三樓-詠劇場</div>
+    </div>
+    ```
+
+    Replace the two `.venue-name` lines with your venue name and hall/floor details. You can add or remove `<div class="venue-name">` elements as needed.
+
+    **"RSVP" call-to-action button label**
+
+    The CTA button scrolls guests to the RSVP section. Its label is the Chinese text `立即回函`:
+
+    ```html index.html
+    <button class="cta-button" onclick="scrollToSection('#rsvp')" href="#rsvp">
+        立即回函
+    </button>
+    ```
+
+    Change `立即回函` to any label you prefer (e.g., `RSVP Now`).
+
+  </Accordion>
+
+  <Accordion title="Love Story section">
+
+    The Love Story section is a series of alternating image-and-text panels. Each panel is a `.story-item` div.
+
+    ```html index.html
+    <div class="story-item">
+        <div class="story-image">
+            <picture>
+                <source type="image/webp"
+                    srcset="static/05-480w.webp 480w, static/05-768w.webp 768w, static/05-1200w.webp 1200w"
+                    sizes="(max-width: 768px) 100vw, 50vw">
+                <img src="static/05.png" alt="Our Story Image 1" loading="lazy" decoding="async">
+            </picture>
+        </div>
+        <div class="story-content">
+            <h3>相遇不容易<br>在一起不簡單</h3>
+        </div>
+    </div>
+    ```
+
+    **To change the caption**, edit the text inside `<h3>` (and `<h4>` if present).
+
+    **To change the image**, replace the `srcset` WebP paths and the fallback `src` PNG/JPG path with your own files. Place the new files in the `static/` directory.
+
+    **To add a new story panel**, copy an existing `.story-item` block and paste it after the last one. Alternate panels use `class="story-item reverse"` to flip the image/text order:
+
+    ```html index.html
+    <!-- Normal layout: image left, text right -->
+    <div class="story-item"> ... </div>
+
+    <!-- Reversed layout: text left, image right -->
+    <div class="story-item reverse"> ... </div>
+    ```
+
+    **To remove a panel**, delete the entire `<div class="story-item">...</div>` block.
+
+  </Accordion>
+
+  <Accordion title="Gallery section">
+
+    The gallery renders a responsive grid of photos stored in `static/gallery/`.
+
+    ```html index.html
+    <div class="gallery-grid">
+        <div class="gallery-item"><img src="static/gallery/YR8-6897.jpg" alt="Gallery Image 1" loading="lazy"
+                decoding="async" fetchpriority="low"></div>
+        <div class="gallery-item"><img src="static/gallery/YR8-7069.jpg" alt="Gallery Image 2" loading="lazy"
+                decoding="async" fetchpriority="low"></div>
+        <!-- ... more items ... -->
+    </div>
+    ```
+
+    **To replace an image**, swap the filename in `src` with your new file (placed in `static/gallery/`). Update the `alt` text to describe the photo.
+
+    **To add a new image**, copy any `<div class="gallery-item">` block and paste it inside `.gallery-grid`, then update the `src` and `alt`.
+
+    **To remove an image**, delete the corresponding `<div class="gallery-item">` block.
+
+    The existing filenames follow a camera-file naming pattern (`YR8-6897.jpg`, `YR5_4953.jpg`). You can use any filename — just keep the path prefixed with `static/gallery/`.
+
+    <Note>
+      For best performance, keep images under 300 KB each and use JPEG format. The `loading="lazy"` and `fetchpriority="low"` attributes are already set to defer offscreen loading.
+    </Note>
+
+  </Accordion>
+
+  <Accordion title="Wedding Details cards">
+
+    The Wedding Details section has three cards: time, venue, and parking.
+
+    **Time card**
+
+    ```html index.html
+    <div class="detail-card text-center">
+        <div class="detail-icon">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+        <h3>時間</h3>
+        <p><strong>2025年10月25日<br>星期六</strong></p>
+        <p>17:30 迎賓酒會<br>18:00 喜宴開席</p>
+    </div>
+    ```
+
+    Update the date, day of the week, and times to match your wedding.
+
+    **Venue card**
+
+    ```html index.html
+    <div class="detail-card text-center">
+        <div class="detail-icon">
+            <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <h3>地點</h3>
+        <p><strong>晶宴會館-桃園館</strong></p>
+        <p>桃園市桃園區<br>南平路166號</p>
+        <a href="https://maps.app.goo.gl/pJSXo1DvpyQhg3LEA" target="_blank"
+            class="btn btn-sm btn-outline-primary mt-2">View Map</a>
+    </div>
+    ```
+
+    Replace the venue name, address lines, and the Google Maps URL (`href="https://maps.app.goo.gl/..."`) with your own.
+
+    **Parking card**
+
+    ```html index.html
+    <div class="detail-card text-center">
+        <div class="detail-icon">
+            <i class="fa-solid fa-square-parking"></i>
+        </div>
+        <h3>停車資訊</h3>
+        <p><strong>特約停車場</strong></p>
+        <p>免費停車(三小時)</p>
+        <img src="static/parking_info.jpg" alt="Parking Location Map"
+            class="img-fluid mt-3 parking-image"
+            style="max-width: 100%; border-radius: 8px; cursor: pointer;" onclick="openParkingModal()"
+            loading="lazy" decoding="async" title="點擊查看大圖">
+    </div>
+    ```
+
+    Replace `static/parking_info.jpg` with your own parking map image. Update the label text and the modal image reference in the `<div id="parkingModal">` block at the bottom of `index.html`.
+
+  </Accordion>
+
+  <Accordion title="Countdown timer">
+
+    The countdown ticks down to the wedding date. The target date is set in `script.js`:
+
+    ```javascript script.js
+    function initCountdown() {
+        // Set the date we're counting down to (October 25, 2025)
+        const weddingDate = new Date("Oct 25, 2025 17:30:00").getTime();
+        // ...
+    }
+    ```
+
+    Change `"Oct 25, 2025 17:30:00"` to your wedding date and time. Use the same format: `"Mon DD, YYYY HH:MM:SS"`. The time is interpreted in the browser's local timezone, so no UTC offset is needed.
+
+    Once the countdown reaches zero, the display automatically changes to a `We're Married!` message.
+
+  </Accordion>
+
+  <Accordion title="RSVP section heading text">
+
+    The two lead paragraphs at the top of the RSVP section are the personal invitation message shown to guests:
+
+    ```html index.html
+    <p class="lead">致我們生命中重要的您們</p>
+    <p class="lead">誠摯邀請您參加我們的婚禮</p>
+    ```
+
+    Replace or translate these lines to match your preferred wording. You can add a third `<p class="lead">` line or remove one as needed.
+
+  </Accordion>
+
+  <Accordion title="Footer credits">
+
+    The footer contains a credits message:
+
+    ```html index.html
+    <footer class="footer-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center">
+                    <p>Crafted by Johnny with lots of love for Josephine </p>
+                    <p>Special thanks to <img
+                            src="https://img.portaly.cc/..."
+                            alt="Rachel Liao Illustration" loading="lazy" decoding="async"
+                            style="height: 5em; width: 5em; border-radius: 50%; object-fit: cover; vertical-align: middle;">
+                        and her cute frogs.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    ```
+
+    Update the `<p>` text and the `<img>` attribution to reflect your own credits. Remove the `<img>` block entirely if you don't need an illustrator credit.
+
+  </Accordion>
+
+</AccordionGroup>

@@ -1,0 +1,135 @@
+---
+title: "Google Sheets Setup"
+description: Configure your Google Sheet and deploy the Apps Script backend
+---
+
+The RSVP form submits data to a Google Sheet via a Google Apps Script web app. This page walks you through creating the sheet, deploying the script, and verifying that everything works before you publish your site.
+
+## Sheet columns
+
+The `setup()` function writes the following headers into row 1 of the `RSVP_responses` sheet. Every form submission maps directly to these column names.
+
+| Column | Field name | Description |
+|--------|-----------|-------------|
+| A | `Timestamp` | Auto-generated UTC+8 timestamp |
+| B | `name` | Guest's full name |
+| C | `relation` | `friends-groom`, `friends-bride`, or `other` |
+| D | `attendance` | `yes` or `no` |
+| E | `guests` | Number of attending guests |
+| F | `dietary` | Meal preference (``, `1` = vegetarian, `2` = fasting) |
+| G | `vegetarian-meals` | Number of vegetarian meals needed |
+| H | `children-seats` | `yes` or `no` |
+| I | `children-seats-count` | Number of children's seats |
+| J | `invitation` | `yes` or `no` (paper invitation) |
+| K | `address` | Mailing address for paper invitation |
+| L | `message` | Message to the couple |
+| M | `email` | Guest's email address |
+
+## Setup steps
+
+<Steps>
+  <Step title="Create a new Google Sheet">
+    Go to [sheets.google.com](https://sheets.google.com) and create a new spreadsheet.
+
+    Rename the first sheet tab (at the bottom of the page) to exactly:
+
+    ```
+    RSVP_responses
+    ```
+
+    This matches the constant in the script:
+
+    ```javascript
+    var SHEET_NAME = "RSVP_responses";
+    ```
+  </Step>
+
+  <Step title="Copy the Sheet ID">
+    Look at the URL in your browser. The Sheet ID is the long alphanumeric string between `/d/` and `/edit`:
+
+    ```
+    https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit
+    ```
+
+    Copy and save this ID — you will need it in the next step.
+  </Step>
+
+  <Step title="Open Apps Script and paste the code">
+    In your spreadsheet, click **Extensions → Apps Script**.
+
+    A new tab opens with the Apps Script editor. Delete all existing code in the editor, then paste the entire contents of `google-apps-script.js` from your project repository.
+  </Step>
+
+  <Step title="Update the SHEET_ID variable">
+    Near the top of the script, find and replace the placeholder Sheet ID with the one you copied:
+
+    ```javascript
+    // REPLACE THIS WITH YOUR OWN SHEET ID
+    var SHEET_ID = "YOUR_SHEET_ID_HERE";
+    ```
+
+    For example:
+
+    ```javascript
+    var SHEET_ID = "11Sp1j-FPY18T-WCTdqSCvMhP9ANqaCX12QXSsFlUhh8";
+    ```
+  </Step>
+
+  <Step title="Update the notification email address">
+    In the `sendEmail()` function, replace the email address with your own so that you receive RSVP notifications:
+
+    ```javascript
+    var johnnyEmail = 'your-email@gmail.com';
+    ```
+
+    The script sends two emails on each submission:
+    - A confirmation email to the guest (if they provided their address)
+    - An admin notification email to this address
+  </Step>
+
+  <Step title="Save and run setup()">
+    Press **Ctrl+S** (or **Cmd+S** on Mac) to save the script.
+
+    In the function dropdown at the top of the editor, select `setup`, then click **Run**.
+
+    You will be prompted to grant permissions — click **Review permissions**, choose your Google account, and click **Allow**.
+
+    The `setup()` function:
+    - Stores the spreadsheet ID in script properties
+    - Creates the `RSVP_responses` sheet if it does not exist
+    - Writes all 13 column headers with orange formatting
+    - Freezes the header row
+    - Sets column widths for readability
+    - Adds dropdown data validation to key columns
+
+    <Note>
+      Run `testSetup()` after `setup()` to do a full end-to-end verification. It tests spreadsheet access, sheet access, and sends a sample email with test data so you can confirm the notification format looks correct before going live.
+    </Note>
+  </Step>
+
+  <Step title="Deploy as a web app">
+    Click **Deploy → New deployment**.
+
+    In the dialog:
+    1. Click the gear icon next to **Select type** and choose **Web app**
+    2. Set **Execute as** to **Me**
+    3. Set **Who has access** to **Anyone**
+    4. Click **Deploy**
+
+    Copy the **Web app URL** that appears — you will paste it into `script.js` in the next setup stage.
+
+    <Warning>
+      The deployment access **must** be set to **Anyone**. If it is set to "Anyone with Google account" or more restrictive, the RSVP form will appear to submit successfully in the browser but no data will be written to the sheet and no emails will be sent — the failure is completely silent from the guest's perspective.
+    </Warning>
+  </Step>
+
+  <Step title="Copy the web app URL">
+    The deployed URL follows this pattern:
+
+    ```
+    https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+    ```
+
+    Save this URL. You will use it when configuring the website in the next section.
+  </Step>
+</Steps>

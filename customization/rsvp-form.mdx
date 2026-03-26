@@ -1,0 +1,460 @@
+---
+title: "RSVP Form"
+description: Customize form fields, validation, and submission behavior for the wedding RSVP.
+---
+
+The RSVP form is defined in `index.html`, validated in `script.js`, and submitted to Google Sheets via `google-apps-script.js`. This page documents every field and explains how to add or remove fields.
+
+<Warning>
+  Adding a new form field requires changes in **three places**: the HTML in `index.html`, the validation logic in `script.js`, and the sheet headers in `google-apps-script.js`. Skipping the Google Apps Script update means the new field's data will not be saved to your spreadsheet.
+</Warning>
+
+## Form fields
+
+<AccordionGroup>
+
+  <Accordion title="貴姓大名 — Guest name (required)">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="name-input">貴姓大名*</label>
+        <input class="form-control" id="name-input" type="text" name="name"
+            required="required" placeholder="Enter your full name(s)" />
+    </div>
+    ```
+
+    - **ID**: `name-input`
+    - **Field name**: `name`
+    - **Type**: text input
+    - **Required**: yes
+
+    This field is always required. The `validateForm()` function in `script.js` explicitly includes `'name'` in the `requiredFields` array.
+
+  </Accordion>
+
+  <Accordion title="Relation — groom's or bride's side">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="relation-input">請問您是男方，還是女方親友</label>
+        <select class="form-control" id="relation-input" name="relation">
+            <option value="">Please select</option>
+            <option value="friends-groom">男方親友</option>
+            <option value="friends-bride">女方親友</option>
+            <option value="other">其他</option>
+        </select>
+    </div>
+    ```
+
+    - **ID**: `relation-input`
+    - **Field name**: `relation`
+    - **Type**: dropdown
+    - **Required**: no
+    - **Values**: `friends-groom` / `friends-bride` / `other`
+
+    Not required. The Google Apps Script maps these values back to readable Chinese text in confirmation emails.
+
+  </Accordion>
+
+  <Accordion title="Attendance — will you attend? (required)">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="attendance-input">您能參加我們的婚禮嗎？*</label>
+        <select class="form-control" id="attendance-input" name="attendance"
+            required="required">
+            <option value="">Please select</option>
+            <option value="yes">我願意</option>
+            <option value="no">忍痛拒絕</option>
+        </select>
+    </div>
+    ```
+
+    - **ID**: `attendance-input`
+    - **Field name**: `attendance`
+    - **Type**: dropdown
+    - **Required**: yes
+    - **Values**: `yes` / `no`
+
+    Required alongside `name`. Used in the Google Apps Script to color-code the confirmation email (green for attending, red for declining).
+
+  </Accordion>
+
+  <Accordion title="Guest count — number of attendees (required)">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="guests-input">當天出席人數*</label>
+        <select class="form-control" id="guests-input" name="guests"
+            required="required">
+            <option value="">Please select</option>
+            <option value="0">隔空祝福(+0)</option>
+            <option value="1">單獨赴約(+1)</option>
+            <option value="2">攜伴參加(+2)</option>
+            <option value="3">攜家帶眷(+3)</option>
+            <option value="4">扶老攜幼(+4)</option>
+            <option value="5">親友到齊(+5)</option>
+            <option value="6">高朋滿座(+6)</option>
+            <option value="7">人山人海(+7)</option>
+            <option value="99">乾爹包桌(8+ up)</option>
+        </select>
+    </div>
+    ```
+
+    - **ID**: `guests-input`
+    - **Field name**: `guests`
+    - **Type**: dropdown
+    - **Required**: yes
+    - **Values**: `0`–`7` and `99` (representing 8+ guests)
+
+    Each numeric value is paired with a playful Chinese label. To adjust the maximum guest count, add or remove `<option>` elements.
+
+  </Accordion>
+
+  <Accordion title="Dietary preference">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="dietary-input">想要選擇什麼餐點類型？</label>
+        <select class="form-control" id="dietary-input" name="dietary">
+            <option value="">Please select</option>
+            <option value="">葷食</option>
+            <option value="1">素食</option>
+            <option value="2">減肥中，我絕食</option>
+        </select>
+    </div>
+    ```
+
+    - **ID**: `dietary-input`
+    - **Field name**: `dietary`
+    - **Type**: dropdown
+    - **Required**: no
+    - **Values**: `""` (non-vegetarian / 葷食), `"1"` (vegetarian / 素食), `"2"` (fasting)
+
+    Selecting `"1"` (素食) triggers the **Vegetarian meals count** conditional field via jQuery `slideDown`.
+
+  </Accordion>
+
+  <Accordion title="Vegetarian meals count — conditional">
+
+    This row is hidden by default (`style="display: none;"`). It appears when the guest selects 素食 in the dietary dropdown.
+
+    ```html index.html
+    <div class="row" id="vegetarian-meals-row" style="display: none;">
+        <div class="col-md-12 pb-3">
+            <div class="form-group">
+                <label for="vegetarian-meals-input">需要幾份素食餐點？</label>
+                <select class="form-control" id="vegetarian-meals-input"
+                    name="vegetarian-meals">
+                    <option value="">Please select</option>
+                    <option value="1">1 份</option>
+                    <option value="2">2 份</option>
+                    <option value="3">3 份</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    ```
+
+    - **ID**: `vegetarian-meals-input` (row ID: `vegetarian-meals-row`)
+    - **Field name**: `vegetarian-meals`
+    - **Type**: dropdown
+    - **Required**: conditionally (required when dietary = `"1"`)
+    - **Values**: `1`–`3`
+
+    The show/hide behavior is in `script.js`:
+
+    ```javascript script.js
+    $('#dietary-input').on('change', function() {
+        const dietaryValue = $(this).val();
+        const vegetarianMealsRow = $('#vegetarian-meals-row');
+        const vegetarianMealsInput = $('#vegetarian-meals-input');
+
+        if (dietaryValue === '1') {
+            vegetarianMealsRow.slideDown(300);
+            vegetarianMealsInput.prop('required', true);
+        } else {
+            vegetarianMealsRow.slideUp(300);
+            vegetarianMealsInput.prop('required', false);
+            vegetarianMealsInput.val('');
+        }
+    });
+    ```
+
+    To extend the maximum count, add more `<option>` elements (e.g., `<option value="4">4 份</option>`).
+
+  </Accordion>
+
+  <Accordion title="Children seats">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="children-seats-input">是否需要兒童座椅</label>
+        <select class="form-control" id="children-seats-input" name="children-seats">
+            <option value="">Please select</option>
+            <option value="yes">需要</option>
+            <option value="no">不需要</option>
+        </select>
+    </div>
+    ```
+
+    - **ID**: `children-seats-input`
+    - **Field name**: `children-seats`
+    - **Type**: dropdown
+    - **Required**: no
+    - **Values**: `yes` / `no`
+
+    Selecting `yes` reveals the **Children seat count** conditional field.
+
+  </Accordion>
+
+  <Accordion title="Children seat count — conditional">
+
+    Hidden by default. Revealed when `children-seats` = `yes`.
+
+    ```html index.html
+    <div class="row" id="children-seats-count-row" style="display: none;">
+        <div class="col-md-12 pb-3">
+            <div class="form-group">
+                <label for="children-seats-count-input">需要幾張兒童座椅？</label>
+                <select class="form-control" id="children-seats-count-input"
+                    name="children-seats-count">
+                    <option value="">Please select</option>
+                    <option value="1">1 張</option>
+                    <option value="2">2 張</option>
+                    <option value="3">3 張</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    ```
+
+    - **ID**: `children-seats-count-input` (row ID: `children-seats-count-row`)
+    - **Field name**: `children-seats-count`
+    - **Type**: dropdown
+    - **Required**: conditionally (required when children-seats = `yes`)
+    - **Values**: `1`–`3`
+
+  </Accordion>
+
+  <Accordion title="Paper invitation">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="invitation-input">是否需要紙本喜帖</label>
+        <select class="form-control" id="invitation-input" name="invitation">
+            <option value="">Please select</option>
+            <option value="yes">需要</option>
+            <option value="no">不需要</option>
+        </select>
+    </div>
+    ```
+
+    - **ID**: `invitation-input`
+    - **Field name**: `invitation`
+    - **Type**: dropdown
+    - **Required**: no
+    - **Values**: `yes` / `no`
+
+    Selecting `yes` reveals the **Mailing address** field.
+
+  </Accordion>
+
+  <Accordion title="Mailing address — conditional">
+
+    Hidden by default. Revealed and made required when `invitation` = `yes`.
+
+    ```html index.html
+    <div class="row" id="address-row" style="display: none;">
+        <div class="col-md-12 pb-3">
+            <div class="form-group">
+                <label for="address-input">寄送地址*</label>
+                <textarea class="form-control" id="address-input" name="address" rows="3"
+                    placeholder="請輸入完整寄送地址（包含郵遞區號、縣市、區域、街道、門牌號碼）"></textarea>
+            </div>
+        </div>
+    </div>
+    ```
+
+    - **ID**: `address-input` (row ID: `address-row`)
+    - **Field name**: `address`
+    - **Type**: textarea
+    - **Required**: conditionally (required when invitation = `yes`)
+
+    The show/hide logic in `script.js`:
+
+    ```javascript script.js
+    $('#invitation-input').on('change', function() {
+        const invitationValue = $(this).val();
+        const addressRow = $('#address-row');
+        const addressInput = $('#address-input');
+
+        if (invitationValue === 'yes') {
+            addressRow.slideDown(300);
+            addressInput.prop('required', true);
+        } else {
+            addressRow.slideUp(300);
+            addressInput.prop('required', false);
+            addressInput.val('');
+        }
+    });
+    ```
+
+    When the address row is hidden, the field's `required` attribute is removed and the value is cleared so it does not block form submission.
+
+  </Accordion>
+
+  <Accordion title="Message to the couple — optional">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="message-input">給新人的話</label>
+        <textarea class="form-control" id="message-input" name="message" rows="3"
+            placeholder="Any special message for the happy couple?"></textarea>
+    </div>
+    ```
+
+    - **ID**: `message-input`
+    - **Field name**: `message`
+    - **Type**: textarea
+    - **Required**: no
+
+    Free-text field for well-wishes. The content is included in the notification email sent to the couple.
+
+  </Accordion>
+
+  <Accordion title="Email — optional, for confirmation">
+
+    ```html index.html
+    <div class="form-group">
+        <label for="email-input">填寫電子郵件，收取確認通知</label>
+        <input class="form-control" id="email-input" type="email" name="email"
+            placeholder="Enter your email address" />
+    </div>
+    ```
+
+    - **ID**: `email-input`
+    - **Field name**: `email`
+    - **Type**: email input
+    - **Required**: no
+
+    If provided, the Google Apps Script sends a bilingual confirmation email to this address (and CCs the couple). The address is validated client-side using `isValidEmail()` in `script.js`:
+
+    ```javascript script.js
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    ```
+
+  </Accordion>
+
+</AccordionGroup>
+
+## Adding a new field
+
+<Steps>
+
+  <Step title="Add the HTML field in index.html">
+
+    Copy an existing `<div class="row">` block and paste it at the desired position in the form. Update the `id`, `name`, `label`, and options:
+
+    ```html index.html
+    <div class="row">
+        <div class="col-md-12 pb-3">
+            <div class="form-group">
+                <label for="table-preference-input">桌次偏好</label>
+                <select class="form-control" id="table-preference-input" name="table-preference">
+                    <option value="">Please select</option>
+                    <option value="window">靠窗</option>
+                    <option value="center">中央</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    ```
+
+  </Step>
+
+  <Step title="Add validation in script.js (if required)">
+
+    If the field is always required, add its `name` value to the `requiredFields` array inside `validateForm()`:
+
+    ```javascript script.js
+    function validateForm() {
+        let isValid = true;
+        const requiredFields = ['name', 'attendance', 'table-preference']; // added
+        // ...
+    }
+    ```
+
+    If the field is conditionally required, follow the pattern used for `address`, `vegetarian-meals`, and `children-seats-count` — push the name into `requiredFields` based on the triggering field's value.
+
+  </Step>
+
+  <Step title="Add the column header in google-apps-script.js">
+
+    The Google Apps Script reads sheet column headers to map form values to columns. Add the new field's `name` to the `headers` array in `createHeaders()`:
+
+    ```javascript google-apps-script.js
+    function createHeaders(sheet) {
+      var headers = [
+        'Timestamp',
+        'name',
+        'relation',
+        'attendance',
+        'guests',
+        'dietary',
+        'vegetarian-meals',
+        'children-seats',
+        'children-seats-count',
+        'invitation',
+        'address',
+        'message',
+        'email',
+        'table-preference'  // new field added here
+      ];
+      // ...
+    }
+    ```
+
+    After updating the script, redeploy the Google Apps Script web app and run `initializeSheet()` to add the new column to the spreadsheet.
+
+  </Step>
+
+</Steps>
+
+## Validation behavior
+
+Client-side validation runs in two ways:
+
+- **On blur**: `validateField()` is called for every input, select, and textarea when the user leaves the field.
+- **On submit**: `validateForm()` checks all required fields before the form data is sent.
+
+`validateField()` adds Bootstrap's `is-invalid` / `is-valid` CSS classes and inserts an `.invalid-feedback` message below the field:
+
+```javascript script.js
+function validateField(field) {
+    const value = field.val().trim();
+    const fieldName = field.attr('name');
+    const isRequired = field.attr('required') === 'required';
+
+    field.removeClass('is-invalid is-valid');
+    field.next('.invalid-feedback').remove();
+
+    if (isRequired && !value) {
+        showFieldError(field, 'This field is required');
+        return false;
+    }
+
+    if (value) {
+        field.addClass('is-valid');
+        if (fieldName === 'email' && !isValidEmail(value)) {
+            showFieldError(field, 'Please enter a valid email address');
+            return false;
+        }
+    }
+
+    return true;
+}
+```

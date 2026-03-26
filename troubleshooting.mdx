@@ -1,0 +1,186 @@
+---
+title: "Troubleshooting"
+description: Solutions for common issues when setting up and running your wedding invitation site
+---
+
+<Note>
+  For most issues, start by opening your browser's developer console (**F12** → **Console** tab) to see client-side errors. For backend issues, open the [Google Apps Script editor](https://script.google.com), then go to **View → Executions** to inspect server-side logs.
+</Note>
+
+<Tip>
+  Before going live, run `testSetup()` in the Apps Script editor to verify that the spreadsheet connection, headers, and email sending all work correctly. Check the **Executions** tab immediately after to confirm there are no errors.
+</Tip>
+
+<AccordionGroup>
+
+  <Accordion title="Form not submitting">
+    The RSVP form submits to the Google Apps Script web app URL configured in `script.js`. Check the following:
+
+    1. Open `script.js` and locate the `submitForm()` function. Verify the `url:` field inside the `$.ajax({...})` call points to your deployed Apps Script URL:
+
+    ```javascript script.js
+    $.ajax({
+        url: "https://script.google.com/macros/s/<YOUR_DEPLOYMENT_ID>/exec",
+        method: "POST",
+        ...
+    });
+    ```
+
+    2. Open your Google Sheet and confirm it is not restricted — the owner's Google account must have access.
+
+    3. In the Apps Script editor, go to **Deploy → Manage deployments** and confirm the deployment is set to:
+       - **Execute as:** Me
+       - **Who has access:** Anyone
+
+    If you recently created a new deployment, the URL changes (see the [Apps Script deployment URL changes](#apps-script-deployment-url-changes) entry below).
+  </Accordion>
+
+  <Accordion title="Email notifications not working">
+    Email sending relies on `GmailApp`, which requires explicit permission grants. Check the following:
+
+    1. In the Apps Script editor, run `testSetup()` manually. The first execution will prompt you to authorize Gmail permissions — click **Review permissions** and grant access.
+
+    2. Open `google-apps-script.js` and verify the `johnnyEmail` variable inside the `sendEmail()` function is set to the correct recipient address:
+
+    ```javascript google-apps-script.js
+    var johnnyEmail = 'johnny114chiu@gmail.com';
+    ```
+
+    3. Check the **Executions** tab (**View → Executions**) in the Apps Script editor for any `Error sending admin email` or `Error sending guest email` log entries.
+
+    <Note>
+      Email failures in `sendEmail()` are intentionally caught and logged without breaking the RSVP form submission. The form can still record responses to the sheet even when email is failing.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Styling issues / fonts not loading">
+    The site loads fonts from Google Fonts and icons from Font Awesome via CDN. If these fail, the page will fall back to system fonts and show missing icons.
+
+    1. Open the browser **Network** tab (F12 → Network), reload the page, and filter for failed requests. Look for **429** (rate-limited) or **CORS** errors on requests to `fonts.googleapis.com` or `fonts.gstatic.com`.
+
+    2. Verify the `<head>` section of `index.html` includes both preconnect hints and the stylesheet link:
+
+    ```html index.html
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Noto+Serif+TC:wght@200;300;400;500;600;700;900&display=swap"
+          rel="stylesheet">
+    ```
+
+    3. Check the **Console** tab for any CSS or JavaScript errors that may be preventing the stylesheet from applying.
+  </Accordion>
+
+  <Accordion title="Countdown shows wrong time">
+    The countdown is driven by a hardcoded date string in `script.js`. Update it to match your actual wedding date and time:
+
+    ```javascript script.js
+    // Inside initCountdown()
+    const weddingDate = new Date("Oct 25, 2025 17:30:00").getTime();
+    ```
+
+    Replace `"Oct 25, 2025 17:30:00"` with your date in the same format, for example `"Mar 15, 2026 16:00:00"`.
+
+    <Warning>
+      The `Date` constructor parses the string using the **browser's local timezone**, not UTC. If your guests are in a different timezone from where you deployed, the countdown hours may appear offset. Test the countdown in the target timezone before going live.
+    </Warning>
+
+    Once the date has passed, the countdown is replaced by the message `🎉 We're Married! 🎉` — this behavior is controlled in `initCountdown()` in `script.js`.
+  </Accordion>
+
+  <Accordion title="RSVP confirmation email not received by guest">
+    Guest confirmation emails are optional and only sent under specific conditions.
+
+    1. The `email` field in the RSVP form is **not required** — if the guest did not enter an email address, no confirmation is sent.
+
+    2. If an email was entered, verify it is a valid address. The client-side regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` validates the format before submission.
+
+    3. Ask the guest to check their **spam or junk folder**. The sender name is `Johnny & Josephine Wedding` and the subject line is `確認通知 - Johnny & Josephine 婚禮`.
+
+    4. Check the Apps Script **Executions** log for a `Guest confirmation email sent successfully to: <address>` entry, or an error line, to confirm whether the send was attempted.
+  </Accordion>
+
+  <Accordion title="Address field not appearing">
+    The mailing address field is hidden by default and only appears when a guest selects **需要** (yes) from the paper invitation (紙本喜帖) dropdown.
+
+    This is intentional dynamic behavior implemented in `script.js`:
+
+    ```javascript script.js
+    $('#invitation-input').on('change', function() {
+        const invitationValue = $(this).val();
+        const addressRow = $('#address-row');
+
+        if (invitationValue === 'yes') {
+            addressRow.slideDown(300);
+            addressInput.prop('required', true);
+        } else {
+            addressRow.slideUp(300);
+        }
+    });
+    ```
+
+    If the address row is not appearing after selecting 需要, open the browser console and check for JavaScript errors. Verify that jQuery is loading correctly from the CDN before `script.js` runs.
+  </Accordion>
+
+  <Accordion title="Google Sheet not found error">
+    The Apps Script reads the spreadsheet using the `SHEET_ID` and `SHEET_NAME` constants at the top of `google-apps-script.js`:
+
+    ```javascript google-apps-script.js
+    var SHEET_NAME = "RSVP_responses";
+    var SHEET_ID = "11Sp1j-FPY18T-WCTdqSCvMhP9ANqaCX12QXSsFlUhh8";
+    ```
+
+    1. Copy the Sheet ID from your Google Sheet URL: `https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit`
+    2. Replace the value of `SHEET_ID` in `google-apps-script.js` with your own Sheet ID.
+    3. Verify that the tab name in your Google Sheet exactly matches `RSVP_responses` (case-sensitive). If you renamed the tab, update `SHEET_NAME` accordingly.
+    4. Run `setup()` in the Apps Script editor after making changes to reinitialize the sheet.
+  </Accordion>
+
+  <Accordion title="Gallery modal not closing on mobile">
+    The gallery modal supports multiple close methods, all implemented in the `initGalleryModal()` function in `script.js`:
+
+    - **Tap the image** — tapping the displayed photo closes the modal.
+    - **Swipe down** — a downward swipe of more than 60 px triggers `closeModal()`.
+    - **Tap the backdrop** — tapping the dark area outside the image closes the modal.
+    - **Press Escape** — works on both desktop keyboards and mobile keyboards (via `keydown` event).
+    - **Tap the × button** — the close button in the top corner dismisses the modal.
+
+    If none of these are working, check the browser console for JavaScript errors in `initGalleryModal()`. Also confirm jQuery is loaded before `script.js` executes.
+  </Accordion>
+
+  <Accordion title="Form data showing as empty in sheet">
+    The Apps Script maps POST parameters to sheet columns **by header name**. If the column headers in your Google Sheet do not exactly match what `createHeaders()` writes, values will be missing.
+
+    The expected headers are:
+
+    ```javascript google-apps-script.js
+    var headers = [
+        'Timestamp', 'name', 'relation', 'attendance', 'guests',
+        'dietary', 'vegetarian-meals', 'children-seats',
+        'children-seats-count', 'invitation', 'address', 'message', 'email'
+    ];
+    ```
+
+    Run `setup()` in the Apps Script editor to reinitialize the sheet with the correct headers and formatting. This is safe to run on a sheet that already has data — it will only recreate headers if they are missing or incorrect.
+  </Accordion>
+
+  <Accordion title="Apps Script deployment URL changes">
+    Every time you create a **new deployment** in Apps Script, Google generates a new unique URL. The old URL may stop working.
+
+    1. After creating a new deployment, copy the updated URL from **Deploy → Manage deployments**.
+    2. Open `script.js` and update the `url:` field in `submitForm()`:
+
+    ```javascript script.js
+    $.ajax({
+        url: "https://script.google.com/macros/s/<NEW_DEPLOYMENT_ID>/exec",
+        ...
+    });
+    ```
+
+    3. Commit the updated `script.js` and redeploy the site (push to GitHub Pages or re-upload to your host).
+
+    <Tip>
+      Instead of creating a new deployment every time, use **Edit deployment** to update the existing deployment in place — this preserves the URL.
+    </Tip>
+  </Accordion>
+
+</AccordionGroup>

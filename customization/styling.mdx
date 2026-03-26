@@ -1,0 +1,280 @@
+---
+title: "Styling & Theming"
+description: Customize colors, fonts, and visual design of your wedding invitation site.
+---
+
+All visual styling lives in `style.css`. The Google Fonts import is in `index.html`. Change these values to match your wedding palette and typography.
+
+<Warning>
+  After any CSS change, test your site on a mobile device (or browser DevTools at 375px width) before publishing. The site uses several responsive breakpoints and some changes that look fine on desktop can break the mobile layout.
+</Warning>
+
+<AccordionGroup>
+
+  <Accordion title="Color scheme">
+
+    The site uses a warm brown palette throughout. The two primary brand colors are:
+
+    | Color name    | Hex       | Used for                                      |
+    |---------------|-----------|-----------------------------------------------|
+    | Saddle brown  | `#8B4513` | Section titles, detail icons, form focus ring |
+    | Burlywood     | `#DEB887` | Footer links                                  |
+    | Sandy brown   | `#d4b99c` | Nav brand, date-time, CTA button, section underline |
+
+    **Section titles** (`style.css`):
+
+    ```css style.css
+    .section-title {
+        font-family: 'Dancing Script', cursive;
+        font-size: 3rem;
+        font-weight: 700;
+        color: #8B4513;
+        margin-bottom: 1rem;
+    }
+    ```
+
+    **Detail card icons** (`style.css`):
+
+    ```css style.css
+    .detail-icon {
+        font-size: 3rem;
+        color: #8B4513;
+        margin-bottom: 1.5rem;
+    }
+    ```
+
+    **Nav brand and accent** (`style.css`):
+
+    ```css style.css
+    .nav-brand {
+        font-family: 'Great Vibes', cursive;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #d4b99c;
+        text-decoration: none;
+    }
+    ```
+
+    **Footer links** (`style.css`):
+
+    ```css style.css
+    .footer-section a {
+        color: #DEB887;
+        text-decoration: none;
+    }
+
+    .footer-section a:hover {
+        color: #8B4513;
+    }
+    ```
+
+    **Confetti colors** (triggered on successful RSVP submission, in `triggerConfetti()` inside `script.js`):
+
+    ```javascript script.js
+    const colors = ['#8B4513', '#DEB887', '#F4A460', '#D2B48C'];
+    ```
+
+    To change the overall palette, find-and-replace these hex values across both files:
+
+    <CodeGroup>
+
+    ```css Replace saddle brown
+    /* Find all instances of #8B4513 in style.css and replace */
+    /* Example: change to deep teal */
+    color: #0d6e6e;
+    ```
+
+    ```css Replace burlywood accent
+    /* Find all instances of #d4b99c / #DEB887 in style.css and replace */
+    /* Example: change to dusty rose */
+    color: #c4a0a0;
+    ```
+
+    </CodeGroup>
+
+  </Accordion>
+
+  <Accordion title="Fonts">
+
+    Three Google Fonts are loaded. The `@import` link is in `index.html`:
+
+    ```html index.html
+    <link
+        href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Noto+Serif+TC:wght@200;300;400;500;600;700;900&display=swap"
+        rel="stylesheet">
+    ```
+
+    | Font          | Used for                                 | CSS declaration                              |
+    |---------------|------------------------------------------|----------------------------------------------|
+    | Great Vibes   | Nav brand (`J & J`), couple names in hero | `font-family: 'Great Vibes', cursive;`       |
+    | Dancing Script | Section titles, countdown numbers       | `font-family: 'Dancing Script', cursive;`    |
+    | Noto Serif TC | Body text (Chinese + Latin)              | `font-family: "Noto Serif TC", serif, ...;`  |
+
+    **Body font** (`style.css`):
+
+    ```css style.css
+    body {
+        font-family: "Noto Serif TC", serif, 'Arial', 'Helvetica', 'Microsoft YaHei', sans-serif;
+    }
+    ```
+
+    **Couple names** (`style.css`):
+
+    ```css style.css
+    .couple-names {
+        font-size: 3.5rem;
+        font-weight: 400;
+        letter-spacing: 0.3rem;
+        color: #8B4513;
+        font-family: 'Great Vibes', cursive;
+    }
+    ```
+
+    **Section titles** (`style.css`):
+
+    ```css style.css
+    .section-title {
+        font-family: 'Dancing Script', cursive;
+        font-size: 3rem;
+    }
+    ```
+
+    To swap fonts, update the Google Fonts URL in `index.html` and the corresponding `font-family` declarations in `style.css`.
+
+  </Accordion>
+
+  <Accordion title="Hero background image">
+
+    The hero displays a full-viewport cover photo:
+
+    ```html index.html
+    <div class="hero-image">
+        <img src="static/01_cover.webp" alt="Wedding Photo" fetchpriority="high" decoding="async" sizes="100vw" />
+    </div>
+    ```
+
+    There is also a preload hint in `<head>` to start loading the image early:
+
+    ```html index.html
+    <link rel="preload" as="image" href="static/01_cover.webp" imagesizes="100vw" />
+    ```
+
+    **To replace the cover photo:**
+
+    <Steps>
+      <Step title="Export your photo">
+        Export as `.webp` for the best file size and quality. A JPEG fallback is also fine — just update the extension. Aim for a width of 1920px or more since the image fills the full viewport width.
+      </Step>
+      <Step title="Place the file">
+        Copy the new image to `static/` and name it (e.g., `my_cover.webp`).
+      </Step>
+      <Step title="Update the src and preload href">
+        In `index.html`, change both occurrences of `static/01_cover.webp` to your new filename:
+
+        ```html index.html
+        <!-- Preload hint in <head> -->
+        <link rel="preload" as="image" href="static/my_cover.webp" imagesizes="100vw" />
+
+        <!-- Hero image in <body> -->
+        <img src="static/my_cover.webp" alt="Wedding Photo" fetchpriority="high" decoding="async" sizes="100vw" />
+        ```
+      </Step>
+    </Steps>
+
+    The hero image height is `100vh` on desktop and `50vh` on mobile (set in `.hero-image` in `style.css`).
+
+  </Accordion>
+
+  <Accordion title="Gallery images">
+
+    Gallery photos are stored in `static/gallery/` and referenced directly from `index.html`. Existing filenames follow the camera-export pattern:
+
+    ```
+    static/gallery/YR8-6897.jpg
+    static/gallery/YR8-7069.jpg
+    static/gallery/YR8-7188.jpg
+    static/gallery/YR5_4953.jpg
+    ...
+    ```
+
+    You can use any filename. Add new files to `static/gallery/` and add a corresponding `<div class="gallery-item">` in `index.html`.
+
+    `style.css` includes per-image `object-position` overrides for specific filenames. If you add a portrait photo that crops awkwardly, add a rule like:
+
+    ```css style.css
+    /* Keep the subject's face in frame */
+    .gallery-item img[src="static/gallery/your-photo.jpg"] {
+        object-position: center top;
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Navigation bar">
+
+    The nav bar is fixed at the top with a frosted-glass effect:
+
+    ```css style.css
+    .nav-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        z-index: 1000;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 70px;
+    }
+    ```
+
+    To adjust the nav height, change `height: 70px` in `.nav-container`. The nav hides on downward scroll and reappears on upward scroll — this is controlled by `initNavbarScroll()` in `script.js` and the `.nav-hidden` class in `style.css`.
+
+    Nav link labels are plain text inside `<a>` tags in `index.html`:
+
+    ```html index.html
+    <ul class="nav-menu">
+        <li><a href="#home" class="nav-link">Home</a></li>
+        <li><a href="#story" class="nav-link">Love Story</a></li>
+        <li><a href="#gallery" class="nav-link">Gallery</a></li>
+        <li><a href="#details" class="nav-link">Wedding Details</a></li>
+        <li><a href="#rsvp" class="nav-link">RSVP</a></li>
+    </ul>
+    ```
+
+  </Accordion>
+
+  <Accordion title="Wedding Details cards">
+
+    Each detail card uses the `.detail-card` class:
+
+    ```css style.css
+    .detail-card {
+        background: white;
+        padding: 3rem 2rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .detail-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    ```
+
+    The cards sit inside a Bootstrap 12-column grid (`col-lg-4 col-md-6`). To change card spacing, adjust the `padding` in `.detail-card`. To remove the lift-on-hover effect, delete the `.detail-card:hover` rule.
+
+  </Accordion>
+
+</AccordionGroup>

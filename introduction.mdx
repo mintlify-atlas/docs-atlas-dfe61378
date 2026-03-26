@@ -1,0 +1,118 @@
+---
+title: "Introduction"
+description: "What the Wedding Invitation & RSVP project is, what it does, and how all the pieces fit together."
+---
+
+The **Wedding Invitation & RSVP** project is a ready-to-deploy, single-page application (SPA) for wedding invitations. It combines an elegant bilingual design — English and Traditional Chinese — with a fully functional RSVP form backed by Google Sheets and automatic email notifications. The entire site is static HTML, CSS, and JavaScript, so it deploys for free to GitHub Pages with no server required.
+
+<Info>
+  This template was built for a real wedding (Johnny & Josephine, 2025.10.25). All names, dates, and venue details in the source files are placeholders for you to replace with your own information.
+</Info>
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Markup | HTML5 (`index.html`) |
+| Styles | CSS3 (`style.css`) + Bootstrap 5.3.0 (CDN) |
+| Behavior | JavaScript (`script.js`) + jQuery 3.6.0 (CDN) |
+| Fonts | Google Fonts: Great Vibes, Dancing Script, Noto Serif TC |
+| Icons | Font Awesome 6.4.0 (CDN) |
+| Backend | Google Apps Script (`google-apps-script.js`) |
+| Storage | Google Sheets |
+| Hosting | GitHub Pages (or any static host) |
+
+## Site sections
+
+The page is divided into six named sections you scroll through in order:
+
+1. **Hero** — Full-screen cover photo with the couple's names, wedding date/time (`2025.10.25 17:30`), venue name, and a call-to-action button that scrolls to the RSVP form.
+2. **Love Story** — Alternating image-and-text blocks that tell the couple's story in Traditional Chinese.
+3. **Gallery** — A 12-image grid with a lightbox modal. Click any photo to view it full-size; swipe down or press Escape to dismiss.
+4. **Wedding Details** — Three cards showing the date/time, venue address (with a Google Maps link), and parking information (with a zoomable parking map modal).
+5. **Countdown** — A live days/hours/minutes/seconds timer counting down to the wedding date.
+6. **RSVP** — The guest-facing form (see below).
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Bilingual UI" icon="language">
+    Labels, section titles, and RSVP options appear in both English and Traditional Chinese so all guests feel at home.
+  </Card>
+  <Card title="Dynamic RSVP form" icon="list-check">
+    Conditional fields appear or hide based on previous answers — the vegetarian meal count field only shows when a guest selects vegetarian, and the mailing address field only appears when a paper invitation is requested.
+  </Card>
+  <Card title="Google Sheets integration" icon="table">
+    `google-apps-script.js` runs as a Google Apps Script web app. Each RSVP submission is written as a new row in a Google Sheet, with an automatic UTC+8 timestamp and formatted column headers.
+  </Card>
+  <Card title="Email notifications" icon="envelope">
+    On each successful submission the script sends two emails: an HTML confirmation to the guest (if they provided an address) and an admin alert to the couple.
+  </Card>
+  <Card title="Countdown timer" icon="clock">
+    `initCountdown()` in `script.js` ticks every second. When the target date passes, the counter is replaced with a celebration message.
+  </Card>
+  <Card title="Gallery with lightbox" icon="images">
+    `initGalleryModal()` attaches a fade-in modal to every gallery thumbnail. Mobile guests can swipe down to dismiss; desktop users can press Escape.
+  </Card>
+  <Card title="Responsive, mobile-first" icon="mobile">
+    Bootstrap 5's grid and custom breakpoint overrides in `style.css` ensure the site looks correct on phones, tablets, and desktops.
+  </Card>
+  <Card title="Confetti animation" icon="wand-magic-sparkles">
+    After a successful RSVP submission, `triggerConfetti()` in `script.js` rains 50 colored confetti pieces across the screen for a celebratory effect.
+  </Card>
+</CardGroup>
+
+## RSVP form fields
+
+The form (`#wedding-form` in `index.html`) collects the following data:
+
+| Field | Required | Notes |
+|---|---|---|
+| Name | Yes | Guest's full name |
+| Relation | No | Groom's side / Bride's side / Other |
+| Attendance | Yes | Accept / Decline |
+| Guest count | Yes | 0 – 8+ options with playful Chinese labels |
+| Dietary preference | No | Regular / Vegetarian / Fasting |
+| Vegetarian meal count | Conditional | Shown only when vegetarian is selected |
+| Children's seats | No | Yes / No |
+| Children's seat count | Conditional | Shown only when children's seats are requested |
+| Paper invitation | No | Yes / No |
+| Mailing address | Conditional | Shown only when paper invitation is requested |
+| Message to the couple | No | Free-text textarea |
+| Email | No | Used to send the guest a confirmation email |
+
+## File structure
+
+```
+letsparty20251025.github.io/
+├── index.html            # The single HTML page — all sections live here
+├── style.css             # All custom styles, animations, and responsive overrides
+├── script.js             # Countdown, smooth scroll, gallery, form handling, confetti
+├── google-apps-script.js # Google Apps Script: receives POST data, writes to Sheets, sends email
+├── static/               # Wedding photos, gallery images, and parking map
+└── README.md             # Original setup instructions
+```
+
+### File roles
+
+- **`index.html`** — Defines the complete page structure: navigation, all six sections, the RSVP form, footer, and the parking-map modal. All content that guests see and read lives here.
+- **`style.css`** — Fonts, color scheme (primary brown `#8B4513`, accent `#DEB887`), section layouts, card styles, gallery grid, countdown display, form appearance, and CSS animations (including `confetti-fall`).
+- **`script.js`** — Initializes all interactive behavior on `$(document).ready`. Owns the countdown timer, smooth-scroll navigation, mobile nav toggle, gallery lightbox, form validation and AJAX submission, confetti, scroll-triggered animations via `IntersectionObserver`, and the parking-map modal.
+- **`google-apps-script.js`** — Deployed as a Google Apps Script web app. Handles `doPost` requests by writing form data to a Google Sheet named `RSVP_responses`, sending email notifications via `GmailApp`, and returning a JSON result. Also includes `initializeSheet()` to create and format sheet headers on first run.
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get the site live in under 15 minutes.
+  </Card>
+  <Card title="Setup guide" icon="gear" href="/setup/google-sheets">
+    Step-by-step configuration for Google Sheets, the website, and deployment.
+  </Card>
+  <Card title="Customization" icon="palette" href="/customization/wedding-details">
+    Change names, dates, venue, colors, fonts, and form fields.
+  </Card>
+  <Card title="Troubleshooting" icon="circle-question" href="/troubleshooting">
+    Diagnose and fix common issues with the form, emails, and styling.
+  </Card>
+</CardGroup>

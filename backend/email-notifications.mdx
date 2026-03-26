@@ -1,0 +1,164 @@
+---
+title: "Email Notifications"
+description: Automatic email alerts sent to guests and the couple on every RSVP submission.
+---
+
+## Overview
+
+Every RSVP submission triggers a dual-email system:
+
+1. **Guest confirmation** — sent to the guest's own email address (if provided), with the couple CC'd. Includes the guest's submitted details plus wedding date, venue, and transportation information.
+2. **Admin notification** — always sent to the couple's email address. Includes a full summary of the submitted RSVP data.
+
+Both emails are HTML-formatted and sent through the Google account that owns the Apps Script deployment.
+
+<Warning>
+  Gmail API permissions must be granted the first time the script runs. When you first execute `setup()` or `testSetup()` from the Apps Script editor, Google will prompt you to authorise the `GmailApp` scope. The script will not send emails until this authorisation is completed.
+</Warning>
+
+---
+
+## `sendEmail(data)`
+
+Called by `handleRequest` immediately after writing the row to the sheet. Accepts the raw `request.parameter` object.
+
+```javascript
+function sendEmail(data) {
+  var johnnyEmail = 'johnny114chiu@gmail.com';
+
+  // Guest confirmation — only if the guest provided an email
+  if (data.email && data.email.trim() !== '') {
+    var guestSubject = '確認通知 - Johnny & Josephine 婚禮';
+    var guestBody    = createEmailBody(data, true);
+
+    var guestOptions = {
+      'name':     'Johnny & Josephine Wedding',
+      'htmlBody': guestBody,
+      'cc':       johnnyEmail   // couple is CC'd on every guest confirmation
+    };
+
+    try {
+      GmailApp.sendEmail(data.email, guestSubject, '', guestOptions);
+    } catch(e) {
+      console.error('Error sending guest email:', e.toString());
+    }
+  }
+
+  // Admin notification — always sent
+  var adminSubject = 'New Wedding RSVP Response from ' + (data.name || 'Unknown Guest');
+  var adminBody    = createEmailBody(data, false);
+
+  var adminOptions = {
+    'name':     'Wedding RSVP System',
+    'htmlBody': adminBody
+  };
+
+  try {
+    GmailApp.sendEmail(johnnyEmail, adminSubject, '', adminOptions);
+  } catch(e) {
+    console.error('Error sending admin email:', e.toString());
+  }
+}
+```
+
+<Note>
+  Email errors are caught and logged individually but do **not** fail the form submission. If `GmailApp.sendEmail()` throws, the RSVP row has already been written to the sheet and `handleRequest` will still return `{ "result": "success" }`.
+</Note>
+
+---
+
+## Email subjects
+
+| Recipient | Subject |
+|---|---|
+| Guest (if email provided) | `確認通知 - Johnny & Josephine 婚禮` |
+| Couple (admin) | `New Wedding RSVP Response from {name}` |
+
+The couple is also CC'd on every guest confirmation email.
+
+---
+
+## `createEmailBody(data, isGuestEmail)`
+
+Builds the HTML body for both email types. The `isGuestEmail` boolean flag controls which sections are rendered.
+
+```javascript
+function createEmailBody(data, isGuestEmail) {
+  var attendanceStatus = data.attendance === 'yes' ? '✅ 我願意' : '❌ 忍痛拒絕';
+  var attendanceColor  = data.attendance === 'yes' ? '#28a745' : '#dc3545';
+  // ... builds and returns an HTML string
+}
+```
+
+### Email sections
+
+**Both guest and admin emails include:**
+
+- **Attendance status badge** — a coloured pill showing `✅ 我願意` (green, `#28a745`) or `❌ 忍痛拒絕` (red, `#dc3545`)
+- **RSVP data table** — a formatted table with all submitted fields:
+  - Name, relation, email, guest count
+  - Dietary preference (mapped to readable text)
+  - Vegetarian meal count (shown only when dietary is `1`)
+  - Children seats and count
+  - Paper invitation request, mailing address, message to the couple
+  - Submission timestamp
+
+**Guest emails only additionally include:**
+
+- **Wedding info card** — date (2025年10月25日, 星期六), time (下午5:30), venue (晶宴會館-桃園館 三樓詠劇場), and address (桃園市桃園區南平路166號)
+- **Transportation and parking info** — a parking map image, parking lot details (free for 3 hours), and bus/coach/train/HSR directions
+
+---
+
+## Value mappings
+
+### Dietary preference
+
+| Raw value | Displayed as |
+|---|---|
+| `""` (empty) | `葷食` |
+| `"1"` | `素食` |
+| `"2"` | `減肥中，我絕食` |
+
+### Attendance status
+
+| Raw value | Displayed as | Badge colour |
+|---|---|---|
+| `"yes"` | `✅ 我願意` | Green (`#28a745`) |
+| `"no"` | `❌ 忍痛拒絕` | Red (`#dc3545`) |
+
+### Relation
+
+| Raw value | Displayed as |
+|---|---|
+| `"friends-groom"` | `男方親友` |
+| `"friends-bride"` | `女方親友` |
+| `"other"` | `其他` |
+
+### Children seats
+
+| Raw value | Displayed as |
+|---|---|
+| `"yes"` | `需要` |
+| `"no"` | `不需要` |
+
+### Invitation
+
+| Raw value | Displayed as |
+|---|---|
+| `"yes"` | `需要` |
+| `"no"` | `不需要` |
+
+---
+
+## Configuration
+
+<Tip>
+  To change the recipient for admin notifications and the CC on guest confirmations, update the `johnnyEmail` variable at the top of `sendEmail()`:
+
+  ```javascript
+  var johnnyEmail = 'your-email@gmail.com';
+  ```
+
+  This single variable controls both the admin notification destination and the CC address on guest confirmation emails.
+</Tip>

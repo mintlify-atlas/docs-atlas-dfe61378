@@ -1,0 +1,156 @@
+---
+title: "Deployment"
+description: Publish your wedding invitation site to the web
+---
+
+The site is a static website — no server-side rendering, no build step. Deployment means copying a handful of files to any host that can serve HTML.
+
+<Warning>
+  Make sure you have updated the Apps Script URL in `script.js` before deploying. If the old placeholder URL is still in place, form submissions will silently fail for all guests.
+</Warning>
+
+## Files to deploy
+
+These are the only files your guests' browsers need:
+
+| File / Folder | Purpose |
+|---|---|
+| `index.html` | Main page — all sections live here |
+| `style.css` | Stylesheet |
+| `script.js` | Countdown timer, smooth scroll, RSVP form logic |
+| `static/` | Cover photo, gallery images, parking map, invitation card |
+| `favicon-16x16.png` | Browser tab favicon (16 × 16) |
+| `favicon-32x32.png` | Browser tab favicon (32 × 32) |
+| `apple-touch-icon.png` | iOS home screen icon |
+
+<Note>
+  `google-apps-script.js` is **not** deployed with the website. That file runs exclusively on Google's servers as a web app. It exists in the repository only as a reference copy of the script you pasted into the Apps Script editor.
+</Note>
+
+## Hosting options
+
+<Tabs>
+  <Tab title="GitHub Pages">
+    GitHub Pages is the zero-cost option and is what the original site uses at `letsparty20251025.github.io`.
+
+    <Steps>
+      <Step title="Push your code to GitHub">
+        Create a new repository on GitHub (public or private — Pages works with both on free plans for public repos).
+
+        ```bash
+        git init
+        git add .
+        git commit -m "Initial commit"
+        git remote add origin https://github.com/username/repo-name.git
+        git push -u origin main
+        ```
+      </Step>
+
+      <Step title="Enable GitHub Pages">
+        In your repository on GitHub, go to **Settings → Pages**.
+
+        Under **Build and deployment**, set:
+        - **Source**: `Deploy from a branch`
+        - **Branch**: `main`
+        - **Folder**: `/ (root)`
+
+        Click **Save**.
+      </Step>
+
+      <Step title="Wait for deployment">
+        GitHub Actions will build and publish the site. This typically takes 1–2 minutes.
+
+        Refresh the Pages settings page — when the deployment completes you will see:
+
+        ```
+        Your site is live at https://username.github.io/repo-name
+        ```
+      </Step>
+
+      <Step title="(Optional) Use a custom domain">
+        If you own a domain, add it in the **Custom domain** field on the same Pages settings page. GitHub will provision an HTTPS certificate automatically via Let's Encrypt.
+
+        Add a `CNAME` file to the repository root containing only your domain:
+
+        ```
+        www.yourdomain.com
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Netlify">
+    Netlify offers a generous free tier with automatic deployments on every `git push`.
+
+    <Steps>
+      <Step title="Connect your GitHub repository">
+        Log in at [netlify.com](https://netlify.com) and click **Add new site → Import an existing project**.
+
+        Choose **GitHub** as the Git provider and authorize Netlify to access your repositories. Select your wedding site repository.
+      </Step>
+
+      <Step title="Configure build settings">
+        Because this is a plain static site with no build process, leave all build settings blank:
+
+        - **Base directory**: _(empty)_
+        - **Build command**: _(empty)_
+        - **Publish directory**: `.` or _(empty)_
+
+        Click **Deploy site**.
+      </Step>
+
+      <Step title="Wait for the initial deploy">
+        Netlify deploys in under a minute. Your site will be live at a generated URL like:
+
+        ```
+        https://random-name-123abc.netlify.app
+        ```
+
+        Every subsequent `git push` to `main` triggers an automatic redeploy.
+      </Step>
+
+      <Step title="(Optional) Add a custom domain">
+        Go to **Site settings → Domain management → Add a domain**.
+
+        Enter your domain name and follow the DNS configuration instructions. Netlify provisions HTTPS automatically.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Traditional Hosting">
+    If you already have a shared hosting plan (cPanel, FTP, etc.), you can upload the files directly.
+
+    <Steps>
+      <Step title="Upload the site files">
+        Using your host's File Manager or an FTP client (e.g. FileZilla), upload the following to your domain's public root directory (usually `public_html` or `www`):
+
+        ```
+        index.html
+        style.css
+        script.js
+        static/           ← entire folder including all subfolders
+        favicon-16x16.png
+        favicon-32x32.png
+        apple-touch-icon.png
+        ```
+
+        Preserve the directory structure — `script.js` references `static/01_cover.webp` and other paths relative to `index.html`.
+      </Step>
+
+      <Step title="Verify DNS points to the correct directory">
+        Confirm that your domain's DNS A record (or CNAME for a subdomain) resolves to the hosting server, and that the server's document root is set to the directory where you uploaded the files.
+
+        Most shared hosts do this automatically for the primary domain.
+      </Step>
+
+      <Step title="Test the live site">
+        Open your domain in a browser and check:
+
+        - The cover photo loads
+        - The countdown timer is ticking
+        - The RSVP form submits successfully (watch the browser console for response logs)
+        - Gallery images load when scrolled into view
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>

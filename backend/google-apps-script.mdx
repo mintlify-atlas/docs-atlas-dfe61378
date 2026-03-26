@@ -1,0 +1,318 @@
+---
+title: "Google Apps Script"
+description: The server-side backend that processes RSVP submissions and writes to Google Sheets.
+---
+
+## Overview
+
+Google Apps Script is a cloud-based JavaScript platform that runs on Google's servers. The wedding RSVP site uses it as a zero-cost backend — no server to provision, no hosting fees — that receives form submissions, writes rows to a Google Sheet, and dispatches email notifications via Gmail.
+
+Key reasons it was chosen:
+
+- **Free** — runs entirely within the Google Workspace quota
+- **No server required** — deployed as a Web App, accessible via a public HTTPS URL
+- **Native Google Sheets integration** — `SpreadsheetApp` reads and writes directly to the spreadsheet
+- **Native Gmail integration** — `GmailApp` sends confirmation and admin emails without any SMTP configuration
+
+<Warning>
+  The `SHEET_ID` constant in the script must be replaced with the actual ID of your Google Sheet before deploying. The ID is the long string in the Sheet's URL between `/d/` and `/edit`.
+</Warning>
+
+## Constants
+
+```javascript
+var SHEET_NAME = "RSVP_responses"; // Name of the sheet tab
+var SHEET_ID   = "11Sp1j-FPY18T-WCTdqSCvMhP9ANqaCX12QXSsFlUhh8"; // REPLACE THIS
+```
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `SHEET_NAME` | `"RSVP_responses"` | The tab name inside the Google Sheet |
+| `SHEET_ID` | *(your sheet ID)* | Identifies which Google Sheet to open |
+
+---
+
+## Functions
+
+### `doGet(e)`
+
+Handles HTTP GET requests sent to the Web App URL. Returns a JSON test response that confirms the script is live and reachable.
+
+```javascript
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Google Apps Script is working',
+      timestamp: new Date(new Date().getTime() + 8 * 60 * 60 * 1000)
+                  .toISOString().replace('T', ' ').replace('Z', ' UTC+8'),
+      method: 'GET'
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+```
+
+**Response shape**
+
+```json
+{
+  "success": true,
+  "message": "Google Apps Script is working",
+  "timestamp": "2025-10-25 17:30:00.000 UTC+8",
+  "method": "GET"
+}
+```
+
+Open the Web App URL in a browser to verify the deployment is healthy.
+
+<Note>
+  Timestamps throughout the script are expressed in **UTC+8** (Taiwan Standard Time). The offset is applied manually by adding `8 * 60 * 60 * 1000` milliseconds to the current UTC time before formatting.
+</Note>
+
+---
+
+### `doPost(request)`
+
+The HTTP entry point for RSVP form submissions. Every POST from the frontend is routed here and immediately delegated to `handleRequest`.
+
+```javascript
+function doPost(request) {
+  return handleRequest(request);
+}
+```
+
+Keeping `doPost` thin makes the script easier to unit-test and extend: swap out `handleRequest` without touching the Web App entry point.
+
+---
+
+### `handleRequest(request)`
+
+The core function. It acquires a concurrency lock, writes the submission to the sheet, triggers email notifications, and returns a JSON result.
+
+```javascript
+function handleRequest(request) {
+  var lock = LockService.getPublicLock();
+  lock.waitLock(30000); // wait up to 30 seconds
+
+  try {
+    var doc   = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = doc.getSheetByName(SHEET_NAME);
+
+    var headRow = request.parameter.header_row || 1;
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var nextRow = sheet.getLastRow() + 1;
+    var row     = [];
+
+    for (i in headers) {
+      if (headers[i] == "Timestamp") {
+        var utc8Time = new Date(new Date().getTime() + 8 * 60 * 60 * 1000);
+        row.push(utc8Time.toISOString().replace('T', ' ').replace('Z', ' UTC+8'));
+      } else {
+        row.push(request.parameter[headers[i]] || '');
+      }
+    }
+
+    sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+    sendEmail(request.parameter);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ "result": "success", "message": "RSVP submitted successfully" }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(e) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ "result": "error", "error": e.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+```
+
+**Concurrency lock**
+
+`LockService.getPublicLock()` creates a lock shared across all simultaneous executions of the script. `waitLock(30000)` blocks the current invocation for up to 30 seconds until the lock is free. This prevents two concurrent submissions from writing to the same row. The lock is always released in the `finally` block.
+
+---
+
+### `setup()`
+
+A one-time initialisation function. Run it once from the Apps Script editor after pasting the script and setting `SHEET_ID`.
+
+```javascript
+function setup() {
+  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  SCRIPT_PROP.setProperty("key", doc.getId());
+
+  var initResult = initializeSheet();
+
+  if (initResult.success) {
+    console.log('Setup completed successfully');
+  } else {
+    console.error('Setup failed:', initResult.error);
+  }
+
+  return initResult;
+}
+```
+
+<Steps>
+  <Step title="Open the Apps Script editor">
+    In your Google Sheet, go to **Extensions → Apps Script**.
+  </Step>
+  <Step title="Paste the script">
+    Replace the default `myFunction` content with the full `google-apps-script.js` file content.
+  </Step>
+  <Step title="Set SHEET_ID">
+    Replace the placeholder value of `SHEET_ID` with your sheet's ID.
+  </Step>
+  <Step title="Run setup()">
+    Select `setup` from the function dropdown and click **Run**. Grant the required permissions when prompted.
+  </Step>
+</Steps>
+
+---
+
+### `initializeSheet()`
+
+Called by `setup()`. Creates the `RSVP_responses` sheet tab if it does not exist, writes the header row if missing, and applies column widths and data validation rules.
+
+**Column widths set by `initializeSheet()`**
+
+| Column | Header | Width (px) |
+|---|---|---|
+| A | Timestamp | 150 |
+| B | name | 200 |
+| C | relation | 150 |
+| D | attendance | 120 |
+| E | guests | 100 |
+| F | dietary | 150 |
+| G | vegetarian-meals | 150 |
+| H | children-seats | 150 |
+| I | children-seats-count | 150 |
+| J | invitation | 150 |
+| K | address | 300 |
+| L | message | 300 |
+| M | email | 200 |
+
+**Data validation rules**
+
+| Column | Allowed values | Invalid allowed? |
+|---|---|---|
+| D — attendance | `yes`, `no` | No |
+| E — guests | `1`, `2`, `3`, `4`, `5` | Yes |
+| C — relation | `friends-groom`, `friends-bride`, `other` | Yes |
+| F — dietary | `""`, `1`, `2` | Yes |
+| G — vegetarian-meals | `""`, `1`, `2`, `3`, `4`, `5` | Yes |
+| H — children-seats | `yes`, `no` | Yes |
+| I — children-seats-count | `""`, `1`, `2`, `3`, `4`, `5` | Yes |
+| J — invitation | `yes`, `no` | Yes |
+
+Only `attendance` (column D) uses `setAllowInvalid(false)` — all other columns permit values outside the dropdown list.
+
+---
+
+### `getRSVPStats()`
+
+Returns a summary of RSVP responses. Run it manually from the Apps Script editor to get a quick count.
+
+```javascript
+function getRSVPStats() {
+  // returns:
+  return {
+    total: data.length,       // total number of responses
+    attending: 0,             // count where attendance === 'yes'
+    notAttending: 0,          // count where attendance === 'no'
+    totalGuests: 0            // sum of guests for attending responses
+  };
+}
+```
+
+To use it: open the Apps Script editor, select `getRSVPStats` from the function dropdown, click **Run**, and inspect the execution log.
+
+---
+
+### `testSetup()`
+
+A convenience test function. It verifies sheet access and sends a test email with dummy data.
+
+```javascript
+function testSetup() {
+  // 1. Calls initializeSheet() and checks for success
+  // 2. Opens the spreadsheet by SHEET_ID
+  // 3. Accesses the RSVP_responses sheet
+  // 4. Calls sendEmail() with a hardcoded test payload
+}
+```
+
+Run `testSetup()` from the Apps Script editor after initial setup to confirm everything is wired correctly. Check the execution log for pass/fail messages and verify that a test email arrives at the admin address.
+
+---
+
+## POST request parameters
+
+The frontend serialises the RSVP form and POSTs it to the Web App URL. All fields are sent as `application/x-www-form-urlencoded` string values.
+
+<ParamField path="name" type="string" required>
+  Full name of the guest submitting the RSVP.
+</ParamField>
+
+<ParamField path="relation" type="string">
+  Relationship to the couple. One of: `friends-groom`, `friends-bride`, `other`. Optional — not required by client-side validation.
+</ParamField>
+
+<ParamField path="attendance" type="string" required>
+  Whether the guest is attending. One of: `yes`, `no`.
+</ParamField>
+
+<ParamField path="guests" type="string" required>
+  Total number of guests in the party. Possible values: `0`, `1`, `2`, `3`, `4`, `5`, `6`, `7`, `99` (where `99` represents 8 or more guests — the "乾爹包桌" option).
+</ParamField>
+
+<ParamField path="dietary" type="string">
+  Dietary preference. One of: `""` (regular), `1` (vegetarian), `2` (fasting).
+</ParamField>
+
+<ParamField path="vegetarian-meals" type="string">
+  Number of vegetarian meals needed. Required when `dietary` is `1`. One of: `1`, `2`, `3`.
+</ParamField>
+
+<ParamField path="children-seats" type="string">
+  Whether children's high chairs are needed. One of: `yes`, `no`.
+</ParamField>
+
+<ParamField path="children-seats-count" type="string">
+  Number of children's high chairs needed. Required when `children-seats` is `yes`. One of: `1`, `2`, `3`.
+</ParamField>
+
+<ParamField path="invitation" type="string">
+  Whether a physical paper invitation is requested. One of: `yes`, `no`.
+</ParamField>
+
+<ParamField path="address" type="string">
+  Mailing address for the paper invitation. Required when `invitation` is `yes`.
+</ParamField>
+
+<ParamField path="message" type="string">
+  Optional message to the couple.
+</ParamField>
+
+<ParamField path="email" type="string">
+  Guest's email address. If provided, a confirmation email is sent to this address.
+</ParamField>
+
+---
+
+## Response fields
+
+<ResponseField name="result" type="string" required>
+  `"success"` on a successful write, `"error"` if an exception was caught.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message. Present on success responses.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message from the caught exception. Present only when `result` is `"error"`.
+</ResponseField>
